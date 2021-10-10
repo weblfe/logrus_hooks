@@ -1,28 +1,40 @@
 package entity
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 )
 
 type (
+	// Symbol 符号类型
 	Symbol string
 
+	// Enum 枚举类型
 	Enum struct {
-		value   interface{}
-		desc    string
-		symbol  Symbol
-		mapping interface{}
+		value   interface{} // 枚举值
+		desc    string      // 枚举描述
+		symbol  Symbol      // 枚举类型
+		mapping interface{} // 枚举自定义映射值
 	}
 
+	// enumLists 枚举列表
 	enumLists []*Enum
 
+	// EnumMgr 分类枚举列表
 	EnumMgr struct {
 		enumType Symbol
 		lists    *enumLists
 		safe     sync.RWMutex
 		loader   func(mgr *EnumMgr)
 		once     sync.Once
+	}
+
+	exportEnum struct {
+		Symbol  Symbol
+		Value   interface{}
+		Mapping interface{}
+		Desc    string
 	}
 )
 
@@ -82,6 +94,15 @@ func (enum *Enum) IsNull() bool {
 	return false
 }
 
+func (enum *Enum) Export() *exportEnum {
+	return &exportEnum{
+		Symbol:  enum.symbol,
+		Value:   enum.value,
+		Desc:    enum.desc,
+		Mapping: enum.mapping,
+	}
+}
+
 func (enums *enumLists) In(e *Enum) bool {
 	if enums == nil || e == nil {
 		return false
@@ -110,12 +131,49 @@ func (enums *enumLists) Register(e *Enum) bool {
 }
 
 func (enums *enumLists) Get(e interface{}) (Enum, bool) {
+	var enum *Enum
+	switch e.(type) {
+	case Enum:
+		var v = e.(Enum)
+		enum = &v
+	case *Enum:
+		enum = e.(*Enum)
+	}
 	for _, v := range *enums {
-		if v.value == e {
+		if enum != nil {
+			if enum.Equal(v) {
+				return *v, true
+			}
+			continue
+		}
+		if v.value == e || v.mapping == e {
 			return *v, true
 		}
 	}
 	return *nullEnum, false
+}
+
+func (enums *enumLists) Index(e interface{}) (int, bool) {
+	var enum *Enum
+	switch e.(type) {
+	case Enum:
+		var v = e.(Enum)
+		enum = &v
+	case *Enum:
+		enum = e.(*Enum)
+	}
+	for i, v := range *enums {
+		if enum != nil {
+			if enum.Equal(v) {
+				return i, false
+			}
+			continue
+		}
+		if v.value == e {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func NewEnumMgr(symbol Symbol) *EnumMgr {
@@ -138,6 +196,12 @@ func (mgr *EnumMgr) Add(enum *Enum) *EnumMgr {
 	}
 	mgr.lists.Register(enum)
 	return mgr
+}
+
+func (mgr *EnumMgr) Index(v interface{}) (int, bool) {
+	mgr.safe.Lock()
+	defer mgr.safe.Unlock()
+	return mgr.lists.Index(v)
 }
 
 func (mgr *EnumMgr) In(enum *Enum) bool {
@@ -170,6 +234,20 @@ func (mgr *EnumMgr) Symbol() Symbol {
 	mgr.safe.Lock()
 	defer mgr.safe.Unlock()
 	return mgr.enumType
+}
+
+func (mgr *EnumMgr) String() string {
+	mgr.safe.Lock()
+	defer mgr.safe.Unlock()
+	var mapping []*exportEnum
+	for _, v := range *mgr.lists {
+		var m = v.Export()
+		mapping = append(mapping, m)
+	}
+	if bytes, err := json.Marshal(mapping); err == nil {
+		return string(bytes)
+	}
+	return ""
 }
 
 func (mgr *EnumMgr) load(loader func(*EnumMgr)) {

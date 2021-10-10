@@ -16,17 +16,13 @@ func init() {
 
 // 注册消息
 func initLogLevels(mgr *EnumMgr) {
-
 	mgr.Add(NewEnum("panic", LogLevel, "FatalLevel").SetCustom(log.PanicLevel))
 	mgr.Add(NewEnum("fatal", LogLevel, "FatalLevel").SetCustom(log.FatalLevel))
 	mgr.Add(NewEnum("error", LogLevel, "ErrorLevel").SetCustom(log.ErrorLevel))
-
 	mgr.Add(NewEnum("warn", LogLevel, "WarnLevel").SetCustom(log.WarnLevel))
 	mgr.Add(NewEnum("info", LogLevel, "InfoLevel").SetCustom(log.InfoLevel))
-
 	mgr.Add(NewEnum("debug", LogLevel, "DebugLevel").SetCustom(log.DebugLevel))
 	mgr.Add(NewEnum("trace", LogLevel, "TraceLevel").SetCustom(log.TraceLevel))
-
 }
 
 func GetLevels() *EnumMgr {

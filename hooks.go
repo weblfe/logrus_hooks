@@ -3,7 +3,7 @@ package logrus_hooks
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/weblfe/logrus_hooks/entity"
-	"github.com/weblfe/logrus_hooks/faced"
+	"github.com/weblfe/logrus_hooks/facede"
 	"github.com/weblfe/logrus_hooks/notify"
 	"github.com/weblfe/logrus_hooks/rotate"
 )
@@ -12,7 +12,7 @@ var (
 	hooksProvider = entity.CreateProvider()
 )
 
-func Register(hook string, factory faced.Creator) bool {
+func Register(hook string, factory facede.Creator) bool {
 	return hooksProvider.Register(hook, factory)
 }
 
@@ -25,14 +25,14 @@ func Exists(hook string) bool {
 }
 
 // Add 添加创建工厂
-func Add(factory faced.HookFactory) bool {
+func Add(factory facede.HookFactory) bool {
 	if factory == nil {
 		return false
 	}
 	return Register(factory.Face(), factory.Create)
 }
 
-func GetMgr() faced.HookMgr {
+func GetMgr() facede.HookMgr {
 	return hooksProvider
 }
 

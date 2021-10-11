@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -158,6 +159,7 @@ func (decoder *envTagDecoder) set(value *reflect.Value, data string) {
 			return
 		}
 	}
+	// 基础类型映射解码
 	var kind = value.Kind()
 	switch kind {
 	case reflect.Bool:
@@ -222,41 +224,60 @@ func (decoder *envTagDecoder) set(value *reflect.Value, data string) {
 		}
 	case reflect.Map:
 		var bytes = []byte(data)
-		if json.Valid(bytes) {
-			var (
-				addr = value.Addr()
-				err  = json.Unmarshal([]byte(data), addr.Interface())
-			)
-			if err == nil {
-				return
-			}
+		if err := decoder.bytesJsonDecoder(bytes, value.Addr().Interface(), true); err != nil {
+			return
 		}
 	case reflect.Array:
-		var bytes = []byte(data)
-		if json.Valid(bytes) {
-			var (
-				addr = value.Addr()
-				err  = json.Unmarshal([]byte(data), addr.Interface())
-			)
-			if err == nil {
-				return
-			}
+		var bytes, ok = decoder.arrBytesDecoder(data)
+		if !ok {
+			return
+		}
+		if err := decoder.bytesJsonDecoder(bytes, value.Addr().Interface()); err != nil {
+			return
 		}
 	case reflect.Slice:
-		var bytes = []byte(data)
-		if json.Valid(bytes) {
-			var (
-				addr = value.Addr()
-				err  = json.Unmarshal([]byte(data), addr.Interface())
-			)
-			if err == nil {
-				return
-			}
+		var bytes, ok = decoder.arrBytesDecoder(data)
+		if !ok {
+			return
+		}
+		if err := decoder.bytesJsonDecoder(bytes, value.Addr().Interface()); err != nil {
+			return
 		}
 	case reflect.String:
 		value.Set(reflect.ValueOf(data))
+	case reflect.Struct:
+		var bytes = []byte(data)
+		if err := decoder.bytesJsonDecoder(bytes, value.Addr().Interface(), true); err != nil {
+			return
+		}
 	}
 	return
+}
+
+func (decoder *envTagDecoder) bytesJsonDecoder(bytes []byte, addr interface{}, check ...bool) error {
+	check = append(check, false)
+	if check[0] && !json.Valid(bytes) {
+		return errors.New("bytes json valid failed")
+	}
+	return json.Unmarshal(bytes, addr)
+}
+
+func (decoder *envTagDecoder) arrBytesDecoder(data string) ([]byte, bool) {
+	var bytes = []byte(data)
+	if !json.Valid(bytes) {
+		if strings.Contains(data, "{") || strings.Contains(data, "}") {
+			return nil, false
+		}
+		if strings.Contains(data, "[") || strings.Contains(data, "]") {
+			return nil, false
+		}
+		data = fmt.Sprintf("[%s]", strings.TrimSpace(data))
+		bytes = []byte(data)
+		if !json.Valid(bytes) {
+			return nil, false
+		}
+	}
+	return bytes, true
 }
 
 func (decoder *envTagDecoder) GetEnvOr(key string, def ...string) string {
@@ -275,11 +296,28 @@ func (decoder *envTagDecoder) DebugKey(key string) string {
 }
 
 func (decoder *envTagDecoder) make(key string) string {
+	if key == "" {
+		return ""
+	}
+	if strings.HasSuffix(key, "_") {
+		key = strings.TrimSuffix(key, "_")
+	}
+	if strings.HasPrefix(key, "_") {
+		key = strings.TrimPrefix(key, "_")
+	}
 	if decoder.prefix != "" {
-		key = decoder.prefix + key
+		if strings.HasPrefix(decoder.suffix, "_") {
+			key = decoder.prefix + key
+		} else {
+			key = fmt.Sprintf("%s_%s", decoder.prefix, key)
+		}
 	}
 	if decoder.suffix != "" {
-		key = key + decoder.suffix
+		if strings.HasPrefix(decoder.suffix, "_") {
+			key = key + decoder.suffix
+		} else {
+			key = fmt.Sprintf("%s_%s", key, decoder.suffix)
+		}
 	}
 	key = strings.TrimSpace(key)
 	switch decoder.caseMode {

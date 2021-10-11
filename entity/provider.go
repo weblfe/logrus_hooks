@@ -2,7 +2,7 @@ package entity
 
 import (
 	"github.com/sirupsen/logrus"
-		"github.com/weblfe/logrus_hooks/faced"
+	"github.com/weblfe/logrus_hooks/facede"
 		"sync"
 )
 
@@ -10,18 +10,18 @@ type (
 		// hookMgrImpl 注册提供者
 	hookMgrImpl struct {
 		locker  sync.RWMutex
-		drivers map[string]faced.Creator
+		drivers map[string]facede.Creator
 	}
 )
 
 func CreateProvider() *hookMgrImpl {
 	var provider = new(hookMgrImpl)
 	provider.locker = sync.RWMutex{}
-	provider.drivers = make(map[string]faced.Creator)
+	provider.drivers = make(map[string]facede.Creator)
 	return provider
 }
 
-func (hook *hookMgrImpl) Register(key string, factory faced.Creator) bool {
+func (hook *hookMgrImpl) Register(key string, factory facede.Creator) bool {
 	hook.locker.Lock()
 	defer hook.locker.Unlock()
 	if _, ok := hook.drivers[key]; ok  {
@@ -55,7 +55,7 @@ func (hook *hookMgrImpl) Exists(key string) bool {
 	return false
 }
 
-func (hook *hookMgrImpl) Get(key string) (faced.Creator, bool) {
+func (hook *hookMgrImpl) Get(key string) (facede.Creator, bool) {
 	hook.locker.Lock()
 	defer hook.locker.Unlock()
 	var factory, ok = hook.drivers[key]
@@ -71,7 +71,7 @@ func (hook *hookMgrImpl) Resolve(key string, args ...interface{}) (logrus.Hook, 
 }
 
 // Replace 替换
-func (hook *hookMgrImpl) Replace(key string, factory faced.Creator) bool {
+func (hook *hookMgrImpl) Replace(key string, factory facede.Creator) bool {
 		hook.locker.Lock()
 		defer hook.locker.Unlock()
 		hook.drivers[key] = factory

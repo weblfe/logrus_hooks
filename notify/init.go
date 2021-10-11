@@ -1,5 +1,5 @@
 package notify
 
 func init()  {
-		notifyMgr.Add(nil)
+		_ = notifyMgr.Add(nil)
 }

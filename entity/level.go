@@ -1,6 +1,9 @@
 package entity
 
-import log "github.com/sirupsen/logrus"
+import (
+	"fmt"
+	log "github.com/sirupsen/logrus"
+)
 
 const (
 	LogLevel Symbol = "level"
@@ -8,6 +11,10 @@ const (
 
 var (
 	levelEnums = NewEnumMgr(LogLevel)
+)
+
+type (
+	Levels []log.Level
 )
 
 func init() {
@@ -44,4 +51,17 @@ func LogLevelOf(e *Enum) log.Level {
 		return log.Level(v.(uint32))
 	}
 	return log.WarnLevel
+}
+
+func (levels Levels) StringerArray() []string {
+	var (
+		result []string
+		enums  = GetLevels()
+	)
+	for _, v := range levels {
+		if enum, ok := enums.Get(v); ok {
+			result = append(result, fmt.Sprintf("%v", enum.value))
+		}
+	}
+	return result
 }

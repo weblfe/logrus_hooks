@@ -4,7 +4,7 @@ import (
 	"errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/weblfe/logrus_hooks/entity"
-	"github.com/weblfe/logrus_hooks/faced"
+	"github.com/weblfe/logrus_hooks/facede"
 	"github.com/weblfe/logrus_hooks/utils"
 )
 
@@ -13,21 +13,19 @@ type httpHookImpl struct {
 	hookName    string
 	method      string
 	contentType string
-	level       []string
-	cacheLevels map[log.Level]int
-	client      faced.WebHookClient
+	levels      []log.Level
+	client      facede.WebHookClient
 }
 
 func NewHttpWebHook(options Options) *httpHookImpl {
 	var hook = new(httpHookImpl)
 	hook.hookName = options.Name
 	hook.hookUrl = options.Url
-	hook.level = options.Levels
-	hook.cacheLevels = make(map[log.Level]int)
+	hook.levels = options.GetLevels()
 	return hook
 }
 
-func (hook *httpHookImpl) SetClient(client faced.WebHookClient) bool {
+func (hook *httpHookImpl) SetClient(client facede.WebHookClient) bool {
 	if hook == nil || hook.client != nil {
 		return false
 	}
@@ -36,30 +34,10 @@ func (hook *httpHookImpl) SetClient(client faced.WebHookClient) bool {
 }
 
 func (hook *httpHookImpl) Levels() []log.Level {
-	if hook == nil || hook.level == nil {
+	if hook == nil || hook.levels == nil {
 		return log.AllLevels
 	}
-	var levels []log.Level
-	if len(hook.cacheLevels) > 0 {
-		for level := range hook.cacheLevels {
-			levels = append(levels, level)
-		}
-		return levels
-	}
-	var levelMgr = entity.GetLevels()
-	for i, v := range hook.level {
-		var enum, ok = levelMgr.Get(v)
-		if !ok {
-			continue
-		}
-		var level = entity.LogLevelOf(&enum)
-		if _, ok = hook.cacheLevels[level]; ok {
-			continue
-		}
-		levels = append(levels, level)
-		hook.cacheLevels[level] = i
-	}
-	return levels
+	return hook.levels
 }
 
 func (hook *httpHookImpl) Fire(entry *log.Entry) error {
@@ -69,7 +47,7 @@ func (hook *httpHookImpl) Fire(entry *log.Entry) error {
 	if entry == nil {
 		return errors.New("nil log entry")
 	}
-	if _, ok := hook.cacheLevels[entry.Level]; !ok {
+	if !hook.checkLevel(entry.Level) {
 		return nil
 	}
 	var client = hook.resolver()
@@ -77,6 +55,29 @@ func (hook *httpHookImpl) Fire(entry *log.Entry) error {
 		return nil
 	}
 	return client.Send(hook.parseData(entry.Data))
+}
+
+func (hook *httpHookImpl) checkLevel(level log.Level) bool {
+	if hook == nil || hook.levels == nil {
+		return false
+	}
+	for _, v := range hook.levels {
+		if v == level {
+			return true
+		}
+	}
+	return false
+}
+
+func (hook *httpHookImpl) GetOptions() Options {
+	var opt = Options{
+		Url:         hook.hookUrl,
+		Method:      hook.method,
+		ContentType: hook.contentType,
+		Name:        hook.hookName,
+		Levels:      entity.Levels(hook.levels).StringerArray(),
+	}
+	return opt
 }
 
 func (hook *httpHookImpl) parseData(data log.Fields) map[string]string {
@@ -87,8 +88,7 @@ func (hook *httpHookImpl) parseData(data log.Fields) map[string]string {
 	return kv
 }
 
-
-func (hook *httpHookImpl) resolver() faced.WebHookClient {
+func (hook *httpHookImpl) resolver() facede.WebHookClient {
 	if hook == nil {
 		return nil
 	}

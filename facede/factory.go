@@ -1,4 +1,4 @@
-package faced
+package facede
 
 import log "github.com/sirupsen/logrus"
 

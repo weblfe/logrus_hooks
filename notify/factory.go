@@ -1,54 +1,49 @@
 package notify
 
 import (
-		log "github.com/sirupsen/logrus"
-		"github.com/weblfe/logrus_hooks/faced"
+	"errors"
+	log "github.com/sirupsen/logrus"
 )
 
-type notifyMgrImpl struct {
-		factories map[string]faced.HookFactory
+type notifyFactoryImpl struct {
+	options *Options
+	hook    log.Hook
 }
 
-var (
-		notifyMgr = newNotifyMgrImpl()
-)
-
-func newNotifyMgrImpl() *notifyMgrImpl  {
-		var mgr = new(notifyMgrImpl)
-		mgr.factories = make(map[string]faced.HookFactory)
-		return mgr
+func (n *notifyFactoryImpl) Face() string {
+	if n == nil || n.options == nil {
+		return ""
+	}
+	return n.options.Name
 }
 
-func (mgr *notifyMgrImpl)invoke(name string) faced.Creator  {
-		return func(args...interface{}) (log.Hook,error) {
-				return nil,nil
+func (n *notifyFactoryImpl) Create(args ...interface{}) (log.Hook, error) {
+	var argc = len(args)
+	if argc == 0 {
+		if n.hook != nil {
+			return n.hook, nil
 		}
+		args = append(args, n.options)
+	}
+	if n.options == args[0] {
+		n.hook = NewHttpWebHook(*n.options)
+		return n.hook, nil
+	}
+	var (
+		info    = args[0]
+		options = NewOptions(info)
+	)
+	if options == nil {
+		return nil, errors.New("options missing call notifyFactoryImpl.Create")
+	}
+	return NewHttpWebHook(*options), nil
 }
 
-func (mgr *notifyMgrImpl)Add(factory faced.HookFactory) *notifyMgrImpl {
-		if factory == nil {
-				return mgr
-		}
-		if _,ok:=mgr.factories[factory.Face()];ok {
-				return mgr
-		}
-		mgr.factories[factory.Face()] = factory
-		return mgr
-}
-
-func (mgr *notifyMgrImpl)Hooks() []string  {
+func CreateNotifyFactory(options *Options) *notifyFactoryImpl {
+	if options == nil {
 		return nil
-}
-
-func (mgr *notifyMgrImpl)Register(hookMgr faced.HookMgr)  {
-			if hookMgr==nil {
-					return
-			}
-		for _,v:=range mgr.Hooks() {
-				hookMgr.Register(v,mgr.invoke(v))
-		}
-}
-
-func Register(mgr faced.HookMgr)  {
-		notifyMgr.Register(mgr)
+	}
+	var factory = new(notifyFactoryImpl)
+	factory.options = options
+	return factory
 }

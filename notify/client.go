@@ -6,11 +6,13 @@ import (
 	"net/http"
 )
 
-type httpClient struct {
-	url         string
-	method      string
-	contentType string
-}
+type (
+	httpClient struct {
+		url         string
+		method      string
+		contentType string
+	}
+)
 
 func NewUrlClient(url string, method ...string) *httpClient {
 	var client = new(httpClient)
@@ -62,12 +64,12 @@ func (client *httpClient) Send(params map[string]string) error {
 }
 
 func (client *httpClient) parseBody(params map[string]string) io.Reader {
-		switch client.method {
-		case http.MethodGet:
-		case http.MethodPost:
-		case http.MethodPut:
-		case http.MethodDelete:
-		}
+	switch client.method {
+	case http.MethodGet:
+	case http.MethodPost:
+	case http.MethodPut:
+	case http.MethodDelete:
+	}
 	return nil
 }
 

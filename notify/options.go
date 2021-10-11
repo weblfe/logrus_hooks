@@ -32,6 +32,12 @@ const (
 )
 
 var (
+	AllSupportMethods = []string{
+		http.MethodGet,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodDelete,
+	}
 	AllSupportContentTypes = []string{
 		ContentTypeJson,
 		ContentTypeFrom,
@@ -39,13 +45,6 @@ var (
 		ContentTypeText,
 		ContentTypeXml,
 		ContentTypePath,
-	}
-
-	AllSupportMethods = []string{
-		http.MethodGet,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodDelete,
 	}
 )
 

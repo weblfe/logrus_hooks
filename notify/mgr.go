@@ -69,7 +69,14 @@ func (mgr *notifyMgrImpl) Add(factory facede.HookFactory) error {
 }
 
 func (mgr *notifyMgrImpl) Hooks() []string {
-	return nil
+	if mgr == nil || len(mgr.factories) <= 0 {
+		return nil
+	}
+	var hooks []string
+	for k := range mgr.factories {
+		hooks = append(hooks, k)
+	}
+	return hooks
 }
 
 func (mgr *notifyMgrImpl) Register(hookMgr facede.HookMgr) {

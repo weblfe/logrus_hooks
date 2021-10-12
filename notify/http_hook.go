@@ -6,6 +6,7 @@ import (
 	"github.com/weblfe/logrus_hooks/entity"
 	"github.com/weblfe/logrus_hooks/facede"
 	"github.com/weblfe/logrus_hooks/utils"
+	"time"
 )
 
 type httpHookImpl struct {
@@ -54,7 +55,7 @@ func (hook *httpHookImpl) Fire(entry *log.Entry) error {
 	if client == nil {
 		return nil
 	}
-	return client.Send(hook.parseData(entry.Data))
+	return client.Send(hook.parseData(entry.Message,entry.Data,entry.Time))
 }
 
 func (hook *httpHookImpl) checkLevel(level log.Level) bool {
@@ -80,7 +81,7 @@ func (hook *httpHookImpl) GetOptions() Options {
 	return opt
 }
 
-func (hook *httpHookImpl) parseData(data log.Fields) map[string]string {
+func (hook *httpHookImpl) parseData(msg string,data log.Fields,at time.Time) map[string]string {
 	var kv = make(map[string]string)
 	for k, v := range data {
 		kv[k] = utils.NewStringer(v).String()
